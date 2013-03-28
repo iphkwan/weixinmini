@@ -1,6 +1,7 @@
 #ifndef _WEIXIND_H_
 #define _WEIXIND_H_
 
+#define WEIXIND_LOG_FILENAME    "weixind.log"
 #define WEIXIND_LISTEN_PORT     12345
 #define WEIXIND_LISTEN_BACKLOG  1024
 #define WEIXIND_EVENT_PER_LOOP  16

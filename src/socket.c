@@ -3,7 +3,9 @@
 int tcp_listen(int port, int backlog)
 {
   struct sockaddr_in sa;
+  const int on = 1;
   int fd;
+
   if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     return -1;
   }
@@ -20,6 +22,13 @@ int tcp_listen(int port, int backlog)
   if (listen(fd, backlog) < 0) {
     return -1;
   }
-  
+
+  /* ignore error */
+  setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&on, sizeof(on));
+
+  if (fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK) < 0) {
+    return -1;
+  }
+
   return fd;
 }

@@ -25,4 +25,8 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+#ifndef BUF_SIZE
+#define BUF_SIZE 4096
+#endif
+
 #endif /* _WEIXIN_H_ */
