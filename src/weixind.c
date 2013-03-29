@@ -1,14 +1,6 @@
-#include "weixin.h"
+#include "headers.h"
 #include "weixind.h"
-#include "socket.h"
-
-void show_help(void)
-{
-  printf("weixind - server of weixin\n"
-         "Usage: weixind [options...]\n"
-         "Options:\n"
-         "-h        show this help\n");
-}
+#include "task.h"
 
 void weixind_log(int log_fd, const char *format, ...)
 {
@@ -46,33 +38,52 @@ void weixind_accept_handler(int accept_fd, weixind_t *weixind)
     if (clifd < 0) {
       return;
     }
+
 #ifndef NDEBUG
     weixind_log(weixind->log_fd, "accept %d", clifd);
 #endif
+
+    if (fcntl(clifd, F_SETFL, fcntl(clifd, F_GETFL, 0) | O_NONBLOCK) < 0) {
+      weixind_log(weixind->log_fd, "fcntl[O_NONBLOCK, clifd:%d] failed: %s",
+                  clifd, strerror(errno));
+      close(clifd);
+      continue;
+    }
+
     ee.events = EPOLLIN;
     ee.data.fd = clifd;
-    epoll_ctl(weixind->epoll_fd, EPOLL_CTL_ADD, clifd, &ee);
+    if (epoll_ctl(weixind->epoll_fd, EPOLL_CTL_ADD, clifd, &ee) < 0) {
+      weixind_log(weixind->log_fd, "epoll_ctl[EPOLL_CTL_ADD, clifd:%d] failed: %s",
+                  clifd, strerror(errno));
+      close(clifd);
+    }
   }
 }
 
 void weixind_client_handler(int client_fd, weixind_t *weixind)
 {
-  struct epoll_event ee;
-  char buffer[BUF_SIZE];
+  task_t *task;
   int n;
-  n = read(client_fd, buffer, sizeof(buffer) - 1);
-  if (n <= 0) {
-#ifndef NDEBUG
-    weixind_log(weixind->log_fd, "close %d", client_fd);
-#endif
-    epoll_ctl(weixind->epoll_fd, EPOLL_CTL_DEL, client_fd, &ee);
-    close(client_fd);
+
+  task = calloc(1, sizeof(*task));
+  if (task == NULL) {
+    weixind_log(weixind->log_fd, "calloc task failed: %s", strerror(errno));
     return;
   }
-
-  /* buffer: 分析客户端请求 */
-  buffer[n] = '\0';
-  weixind_log(weixind->log_fd, "receive from %d: %s", client_fd, buffer);
+  task->fd = client_fd;
+  n = read(task->fd, task->buffer, sizeof(task->buffer) - 1);
+  if (n <= 0) {
+    struct epoll_event ee;
+#ifndef NDEBUG
+    weixind_log(weixind->log_fd, "close %d", task->fd);
+#endif
+    epoll_ctl(weixind->epoll_fd, EPOLL_CTL_DEL, task->fd, &ee);
+    close(task->fd);
+    free(task);
+    return;
+  }
+  task->buffer[n] = '\0';
+  task_queue_push(weixind->task_queue, task);
 }
 
 weixind_t *weixind_init(void)
@@ -87,6 +98,8 @@ weixind_t *weixind_init(void)
 
 #ifdef NDEBUG
   weixind->log_fd = open(WEIXIND_LOG_FILENAME, O_CREAT | O_APPEND, 0644);
+#else
+  weixind->log_fd = -1;
 #endif
 
   weixind->listen_fd = tcp_listen(WEIXIND_LISTEN_PORT, WEIXIND_LISTEN_BACKLOG);
@@ -106,9 +119,32 @@ weixind_t *weixind_init(void)
   ee.events = EPOLLIN;
   ee.data.fd = weixind->listen_fd;
   if (epoll_ctl(weixind->epoll_fd, EPOLL_CTL_ADD, weixind->listen_fd, &ee) < 0) {
-    weixind_log(weixind->log_fd,
-                "epoll_ctl failed[EPOLL_CTL_ADD, listen_fd]: %s", strerror(errno));
+    weixind_log(weixind->log_fd, "epoll_ctl failed[EPOLL_CTL_ADD, listen_fd:%d] failed: %s",
+                weixind->listen_fd, strerror(errno));
     free(weixind);
+    return NULL;
+  }
+
+  weixind->task_queue = task_queue_init();
+  if (weixind->task_queue == NULL) {
+    weixind_log(weixind->log_fd, "task_queue_init failed");
+    free(weixind);
+    return NULL;
+  }
+
+  weixind->db = db_init(WEIXIND_DB_HOST, WEIXIND_DB_PORT,
+                        WEIXIND_DB_USER, WEIXIND_DB_PASSWD,
+                        WEIXIND_DB_DB);
+  if (weixind->db == NULL) {
+    weixind_log(weixind->log_fd, "db_init failed");
+    weixind_done(weixind);
+    return NULL;
+  }
+  
+  weixind->mem = mem_init(WEIXIND_MEM_HOST, WEIXIND_MEM_PORT);
+  if (weixind->mem == NULL) {
+    weixind_log(weixind->log_fd, "mem_init failed");
+    weixind_done(weixind);
     return NULL;
   }
 
@@ -117,12 +153,18 @@ weixind_t *weixind_init(void)
 
 void weixind_done(weixind_t *weixind)
 {
-  struct epoll_event ee;
-  epoll_ctl(weixind->epoll_fd, EPOLL_CTL_DEL, weixind->listen_fd, &ee);
-  close(weixind->listen_fd);
-  close(weixind->epoll_fd);
-  close(weixind->log_fd);
+  if (weixind) {
+    struct epoll_event ee;
+    epoll_ctl(weixind->epoll_fd, EPOLL_CTL_DEL, weixind->listen_fd, &ee);
+    close(weixind->listen_fd);
+    close(weixind->epoll_fd);
+    close(weixind->log_fd);
+    db_done(weixind->db);
+    mem_done(weixind->mem);
+    free(weixind);
+  }
 }
+
 int weixind_server(void)
 {
   weixind_t *weixind;
@@ -135,6 +177,11 @@ int weixind_server(void)
     return -1;
   }
 
+  if (pthread_create(&weixind->tid, NULL, task_queue_handler, weixind) != 0) {
+    weixind_log(-1, "pthread_create[task_queue_handler] failed");
+    return -1;
+  }
+  
   while (1) {
     n = epoll_wait(weixind->epoll_fd, events,
                    WEIXIND_EVENT_PER_LOOP, WEIXIND_EVENT_TIMEOUT);
@@ -148,6 +195,17 @@ int weixind_server(void)
       }
     }
   }
+
+  weixind_done(weixind);
+  return 0;
+}
+
+void show_help(void)
+{
+  printf("weixind - server of weixin\n"
+         "Usage: weixind [options...]\n"
+         "Options:\n"
+         "-h        show this help\n");
 }
 
 int main(int argc, char *argv[])

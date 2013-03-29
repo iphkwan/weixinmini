@@ -1,0 +1,89 @@
+#include "task.h"
+#include "weixind.h"
+#include "command.h"
+
+task_queue_t *task_queue_init(void)
+{
+  task_queue_t *task_queue = calloc(1, sizeof(*task_queue));
+  if (task_queue == NULL) {
+    return NULL;
+  }
+  task_queue->head = task_queue->tail = NULL;
+  task_queue->mutex = malloc(sizeof(*task_queue->mutex));
+  if (task_queue->mutex == NULL) {
+    free(task_queue);
+    return NULL;
+  }
+  if (pthread_mutex_init(task_queue->mutex, NULL) != 0) {
+    free(task_queue->mutex);
+    free(task_queue);
+    return NULL;
+  }
+  return task_queue;
+}
+
+void task_queue_done(task_queue_t *task_queue)
+{
+  pthread_mutex_destroy(task_queue->mutex);
+  free(task_queue->mutex);
+  free(task_queue);
+}
+
+int task_queue_push(task_queue_t *task_queue, task_t *task)
+{
+  pthread_mutex_lock(task_queue->mutex);
+  if (task_queue->head == NULL) {
+    task_queue->head = task;
+  } else {
+    task_queue->tail->next = task;
+  }
+  task_queue->tail = task;
+  task->next = NULL;
+  pthread_mutex_unlock(task_queue->mutex);
+}
+
+task_t *task_queue_pop(task_queue_t *task_queue)
+{
+  task_t *task;
+  pthread_mutex_lock(task_queue->mutex);
+  task = task_queue->head;
+  if (task_queue->head) {
+    task_queue->head = task_queue->head->next;
+  }
+  if (task_queue->tail == task) {
+    task_queue->tail = NULL;
+  }
+  pthread_mutex_unlock(task_queue->mutex);
+  return task;
+}
+
+void *task_queue_handler(void *arg)
+{
+  weixind_t *weixind = arg;
+  task_t *task;
+  char name[10] = "\0";
+  command_t *command;
+  
+  while (1) {
+    task = task_queue_pop(weixind->task_queue);
+    if (task) {
+      /* assume task->buffer is null-terminated  */
+#ifndef NDEBUG
+      weixind_log(weixind->log_fd, "receive %s", task->buffer);
+#endif
+      sscanf(task->buffer, "%10s", name);
+      for (command = Commands; command->name; ++command) {
+        if (strcmp(command->name, name) == 0) {
+          command->handler(weixind, task);
+          free(task);
+          break;
+        }
+      }
+      if (command->name == NULL) {
+        write(task->fd, STRING("command not found"));
+      }
+    } else {
+      usleep(100000);           /* 100ms */
+    }
+  }
+}

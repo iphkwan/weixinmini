@@ -7,6 +7,14 @@ CREATE TABLE `weixin_user` (
 )
 ;
 
+CREATE TABLE `weixin_friend` (
+    `uid` integer NOT NULL,
+    `fid` integer NOT NULL
+)
+;
+ALTER TABLE `weixin_friend` ADD CONSTRAINT `weixin_friend_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
+ALTER TABLE `weixin_friend` ADD CONSTRAINT `weixin_friend_fk_fid` FOREIGN KEY (`fid`) REFERENCES `weixin_user` (`uid`);
+
 CREATE TABLE `weixin_group` (
     `gid` integer AUTO_INCREMENT NOT NULL PRIMARY KEY,
     `uid` integer NOT NULL,
