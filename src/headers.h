@@ -25,10 +25,12 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+#ifndef LINE_SIZE
+#define LINE_SIZE 1024
+#endif
+
 #ifndef BUF_SIZE
 #define BUF_SIZE 4096
 #endif
-
-#define STRING(x)       x, strlen(x)
 
 #endif /* _HEADERS_H_ */

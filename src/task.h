@@ -6,6 +6,8 @@
 typedef struct task_s {
   int fd;
   char buffer[BUF_SIZE];
+  char *uid;
+  char *args;
   struct task_s *next;
 } task_t;
 

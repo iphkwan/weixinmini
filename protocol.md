@@ -30,7 +30,7 @@ S: [(ok gid) | (error reason)]
 C: gdel gid
 S: [(ok) | (error reason)]
 
-C: ginv gid (uid)*
+C: ginv gid uid
 C: gsend gid message
 S: [(ok) | (error reason)]
 

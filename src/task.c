@@ -61,7 +61,7 @@ void *task_queue_handler(void *arg)
 {
   weixind_t *weixind = arg;
   task_t *task;
-  char name[10] = "\0";
+  char *name;
   command_t *command;
   
   while (1) {
@@ -71,7 +71,13 @@ void *task_queue_handler(void *arg)
 #ifndef NDEBUG
       weixind_log(weixind->log_fd, "receive %s", task->buffer);
 #endif
-      sscanf(task->buffer, "%10s", name);
+      task->args = task->buffer;
+      task->uid = command_get_token(&task->args);
+      name = command_get_token(&task->args);
+      if (task->uid == NULL || name == NULL) {
+        write(task->fd, STRING("error invalid command"));
+        continue;
+      }
       for (command = Commands; command->name; ++command) {
         if (strcmp(command->name, name) == 0) {
           command->handler(weixind, task);
@@ -80,7 +86,7 @@ void *task_queue_handler(void *arg)
         }
       }
       if (command->name == NULL) {
-        write(task->fd, STRING("command not found"));
+        write(task->fd, STRING("error command not found"));
       }
     } else {
       usleep(100000);           /* 100ms */

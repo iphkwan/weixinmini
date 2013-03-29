@@ -23,6 +23,14 @@ CREATE TABLE `weixin_group` (
 ;
 ALTER TABLE `weixin_group` ADD CONSTRAINT `weixin_group_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
 
+CREATE TABLE `weixin_user_group` (
+    `uid` integer NOT NULL,
+    `gid` integer NOT NULL
+)
+;
+ALTER TABLE `weixin_user_group` ADD CONSTRAINT `weixin_user_group_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
+ALTER TABLE `weixin_user_group` ADD CONSTRAINT `weixin_user_group_fk_gid` FOREIGN KEY (`gid`) REFERENCES `weixin_group` (`gid`);
+
 CREATE TABLE `weixin_usermsg` (
     `mid` integer AUTO_INCREMENT NOT NULL PRIMARY KEY,
     `uid` integer NOT NULL,

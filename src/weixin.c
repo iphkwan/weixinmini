@@ -47,15 +47,14 @@ void *weixin_client_handler(void *arg)
   buffer = request + strlen(weixin->uid) + 1;
   while (weixin_getline(buffer, BUF_SIZE)) {
     if (strcmp(buffer, "login") == 0) {
-      char passwd[32];
+      char *passwd;
       printf("uid: ");
       if (weixin_getline(weixin->uid, sizeof(weixin->uid)) == NULL) {
-        fprintf(stderr, "invalid uid\n");
+        printf("invalid uid\n");
         continue;
       }
-      printf("pwd: ");
-      if (weixin_getline(passwd, sizeof(passwd)) == NULL) {
-        fprintf(stderr, "invalid password\n");
+      if ((passwd = getpass("pwd: ")) == NULL) {
+        printf("invalid password\n");
         continue;
       }
       snprintf(request, sizeof(request), "-1 login %s %s", weixin->uid, passwd);
@@ -82,7 +81,7 @@ void *weixin_server_handler(void *arg)
   size_t n;
   while ((n = read(weixin->fd, buffer, sizeof(buffer))) > 0) {
     buffer[n] = '\0';
-    printf("%s\n", buffer);
+    fprintf(stderr, "%s\n", buffer);
   }
   if (n < 0) {
     fprintf(stderr, "read failed: %s\n", strerror(errno));
@@ -98,18 +97,18 @@ int weixin_run(const char *host, int port)
   
   weixin = weixin_init();
   if (weixin == NULL) {
-    fprintf(stderr, "weixin_init failed\n");
+    printf("weixin_init failed\n");
     return -1;
   }
   
   weixin->fd = tcp_connect(host, port);
   if (weixin->fd < 0) {
-    fprintf(stderr, "tcp_connect failed\n");
+    printf("tcp_connect failed\n");
     return -1;
   }
 
   if (pthread_create(&weixin->tid, NULL, weixin_server_handler, weixin) != 0) {
-    fprintf(stderr, "pthread_create failed\n");
+    printf("pthread_create failed\n");
     return -1;
   }
   weixin_client_handler(weixin);
