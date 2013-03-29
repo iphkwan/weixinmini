@@ -75,7 +75,7 @@ void *task_queue_handler(void *arg)
       task->uid = command_get_token(&task->args);
       name = command_get_token(&task->args);
       if (task->uid == NULL || name == NULL) {
-        write(task->fd, STRING("error invalid command"));
+        write(task->fd, STRING("response error invalid command"));
         continue;
       }
       for (command = Commands; command->name; ++command) {
@@ -86,7 +86,7 @@ void *task_queue_handler(void *arg)
         }
       }
       if (command->name == NULL) {
-        write(task->fd, STRING("error command not found"));
+        write(task->fd, STRING("response error command not found"));
       }
     } else {
       usleep(100000);           /* 100ms */
