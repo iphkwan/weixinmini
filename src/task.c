@@ -62,7 +62,7 @@ void *task_queue_handler(void *arg)
   weixind_t *weixind = arg;
   task_t *task;
   char *name;
-  command_t *command;
+  int i;
   
   while (1) {
     task = task_queue_pop(weixind->task_queue);
@@ -78,14 +78,20 @@ void *task_queue_handler(void *arg)
         write(task->fd, STRING("response error invalid command"));
         continue;
       }
-      for (command = Commands; command->name; ++command) {
-        if (strcmp(command->name, name) == 0) {
-          command->handler(weixind, task);
+      for (i = 0; Commands[i].name; ++i) {
+        if (i >= COMMAND_MUST_LOGIN &&
+            mem_is_online(weixind->mem, task->uid) <= 0) {
+          write(task->fd, STRING("response error you must login first"));
+          free(task);
+          break;
+        }
+        if (strcmp(Commands[i].name, name) == 0) {
+          Commands[i].handler(weixind, task);
           free(task);
           break;
         }
       }
-      if (command->name == NULL) {
+      if (Commands[i].name == NULL) {
         write(task->fd, STRING("response error command not found"));
       }
     } else {

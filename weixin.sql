@@ -47,23 +47,13 @@ ALTER TABLE `weixin_usermsg` ADD CONSTRAINT `weixin_usermsg_fk_fid` FOREIGN KEY 
 CREATE TABLE `weixin_groupmsg` (
     `mid` integer AUTO_INCREMENT NOT NULL PRIMARY KEY,
     `uid` integer NOT NULL,
-    `content` longtext NOT NULL
-)
-;
-ALTER TABLE `weixin_groupmsg` ADD CONSTRAINT `weixin_groupmsg_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
-
-CREATE TABLE `weixin_groupmsg_index` (
-    `id` integer AUTO_INCREMENT NOT NULL PRIMARY KEY,
-    `uid` integer NOT NULL,
     `gid` integer NOT NULL,
-    `mid` integer NOT NULL,
+    `content` longtext NOT NULL,
     `timestamp` datetime NOT NULL
 )
 ;
-ALTER TABLE `weixin_groupmsg_index` ADD CONSTRAINT `weixin_groupmsg_index_fk_mid` FOREIGN KEY (`mid`) REFERENCES `weixin_groupmsg` (`mid`);
-ALTER TABLE `weixin_groupmsg_index` ADD CONSTRAINT `weixin_groupmsg_index_fk_gid` FOREIGN KEY (`gid`) REFERENCES `weixin_group` (`gid`);
-ALTER TABLE `weixin_groupmsg_index` ADD CONSTRAINT `weixin_groupmsg_index_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
-COMMIT;
+ALTER TABLE `weixin_groupmsg` ADD CONSTRAINT `weixin_groupmsg_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
+ALTER TABLE `weixin_groupmsg` ADD CONSTRAINT `weixin_groupmsg_fk_gid` FOREIGN KEY (`gid`) REFERENCES `weixin_group` (`gid`);
 
 -- 索引先不管, 有时间再说
 -- CREATE INDEX `weixin_group_2600da4b` ON `weixin_group` (`uid`);

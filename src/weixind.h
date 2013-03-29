@@ -13,9 +13,9 @@
 #define WEIXIND_EVENT_TIMEOUT   1000
 #define WEIXIND_DB_HOST         "localhost"
 #define WEIXIND_DB_PORT         3306
-#define WEIXIND_DB_USER         "weixin"
-#define WEIXIND_DB_PASSWD       "weixin"
-#define WEIXIND_DB_DB           "weixin"
+#define WEIXIND_DB_USER         "root"
+#define WEIXIND_DB_PASSWD       "123456"
+#define WEIXIND_DB_DB           "weixinmini"
 #define WEIXIND_MEM_HOST        "localhost"
 #define WEIXIND_MEM_PORT        MEMCACHED_DEFAULT_PORT
 

@@ -1,8 +1,8 @@
 # command
 
 `[(A) | (B)]`: A or B
+`[A]`: zero or one A
 `(A)*`: zero or more A
-`[gid]`: zero or one gid
 
 ## Register
 C: register nickname passwd
@@ -18,7 +18,7 @@ C: fdel fid
 S: [(ok) / (error reason)]
 
 C: fsearch nickname
-S: (fid nickname)*
+S: (fid nickname CRLF)*
 
 C: fsend fid message
 S: [(ok) | (error reason)]

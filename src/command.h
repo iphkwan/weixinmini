@@ -12,7 +12,9 @@ typedef struct command_s {
 
 extern command_t Commands[];
 
+#define COMMAND_MUST_LOGIN   3
 #define STRING(x)            x, strlen(x)
+
 char *command_get_token(char **command);
 
 #endif /* _COMMAND_H_ */
