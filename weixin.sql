@@ -12,6 +12,7 @@ CREATE TABLE `weixin_friend` (
     `fid` integer NOT NULL
 )
 ;
+ALTER TABLE `weixin_friend` ADD PRIMARY KEY (`uid`, `fid`);
 ALTER TABLE `weixin_friend` ADD CONSTRAINT `weixin_friend_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
 ALTER TABLE `weixin_friend` ADD CONSTRAINT `weixin_friend_fk_fid` FOREIGN KEY (`fid`) REFERENCES `weixin_user` (`uid`);
 
@@ -28,6 +29,7 @@ CREATE TABLE `weixin_user_group` (
     `gid` integer NOT NULL
 )
 ;
+ALTER TABLE `weixin_user_group` ADD PRIMARY KEY (`uid`, `gid`);
 ALTER TABLE `weixin_user_group` ADD CONSTRAINT `weixin_user_group_fk_uid` FOREIGN KEY (`uid`) REFERENCES `weixin_user` (`uid`);
 ALTER TABLE `weixin_user_group` ADD CONSTRAINT `weixin_user_group_fk_gid` FOREIGN KEY (`gid`) REFERENCES `weixin_group` (`gid`);
 

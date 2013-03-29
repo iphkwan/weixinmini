@@ -23,3 +23,20 @@ void db_done(MYSQL *mysql)
   }
   mysql_close(mysql);
 }
+
+#ifdef DEBUG_MYSQL
+#include "weixind.h"
+
+int main(int argc, char *argv[])
+{
+  MYSQL *mysql = db_init(WEIXIND_DB_HOST, WEIXIND_DB_PORT,
+                         WEIXIND_DB_USER, WEIXIND_DB_PASSWD,
+                         WEIXIND_DB_DB);
+  if (mysql == NULL) {
+    fprintf(stderr, "db_init failed\n");
+    return -1;
+  }
+  db_done(mysql);
+  return 0;
+}
+#endif

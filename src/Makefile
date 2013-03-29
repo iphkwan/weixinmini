@@ -20,3 +20,5 @@ weixin: $(WEIXIN_SRCS)
 test_mem: $(MEM_SRCS)
 	$(CC) -o $@ $^ -DDEBUG_MEM $(CPPFLAGS) $(CFLAGS) $(LIBS)
 
+clean:
+	rm weixind weixin test_mem
