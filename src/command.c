@@ -53,7 +53,7 @@ void command_register_handler(weixind_t *weixind, task_t *task)
   name = command_get_token(&task->args);
   pwd = command_get_token(&task->args);
   if (pwd == NULL || name == NULL) {
-    write(task->fd, STRING("error invalid arguments"));
+    write(task->fd, STRING("response error invalid arguments"));
     return;
   }
   snprintf(sql, sizeof(sql), "INSERT INTO weixin_user(pwd, name, timestamp)"
@@ -78,7 +78,7 @@ void command_login_handler   (weixind_t *weixind, task_t *task)
   uid = command_get_token(&task->args);
   pwd = command_get_token(&task->args);
   if (uid == NULL || pwd == NULL) {
-    write(task->fd, STRING("error invalid arguments"));
+    write(task->fd, STRING("response error invalid arguments"));
     return;
   }
 
@@ -118,7 +118,7 @@ void command_fadd_handler(weixind_t *weixind, task_t *task)
   int ret;
   fid = command_get_token(&task->args);
   if (fid == NULL) {
-    write(task->fd, STRING("error invalid arguments"));
+    write(task->fd, STRING("response error invalid arguments"));
     return;
   }
 
@@ -154,7 +154,7 @@ void command_fdel_handler    (weixind_t *weixind, task_t *task)
   int ret;
   fid = command_get_token(&task->args);
   if (fid == NULL) {
-    write(task->fd, STRING("error invalid arguments"));
+    write(task->fd, STRING("response error invalid arguments"));
     return;
   }
   snprintf(sql, sizeof(sql), "DELETE FROM weixin_friend"
@@ -180,7 +180,7 @@ void command_fsearch_handler (weixind_t *weixind, task_t *task)
   int ret;
   name = command_get_token(&task->args);
   if (name == NULL) {
-    write(task->fd, STRING("error invalid arguments"));
+    write(task->fd, STRING("response error invalid arguments"));
     return;
   }
   snprintf(sql, sizeof(sql), "SELECT uid, name FROM weixin_user"
@@ -207,16 +207,82 @@ void command_fsearch_handler (weixind_t *weixind, task_t *task)
 
 void command_fsend_handler(weixind_t *weixind, task_t *task)
 {
+  char *fid, *content;
+  char sql[BUF_SIZE];
+  int ret;
+  int fd;
+  fid = command_get_token(&task->args);
+  content = command_get_token(&task->args);
+  if (fid == NULL || content == NULL) {
+    write(task->fd, STRING("response error invalid arguments"));
+    return;
+  }
+  snprintf(sql, sizeof(sql), "INSERT INTO weixin_usermsg (uid, fid, content, timestamp)"
+           " VALUES (%ld, %ld, '%s', Now());",
+           atol(fid), atol(task->uid), content);
+  ret = mysql_query(weixind->db, sql);
+  if (ret == 0) {
+    write(task->fd, STRING("response ok"));
+  } else {
+    write(task->fd, STRING("response error database"));
+  }
+  
+  fd = mem_is_online(weixind->mem, fid);
+  if (fd > 0) {
+    char message[BUF_SIZE];
+    snprintf(message, sizeof(message), "message [fid:%ld] %s",
+             atol(task->uid), content);
+    write(fd, STRING(message));
+  }
 }
 
                          
 void command_gadd_handler    (weixind_t *weixind, task_t *task)
 {
+  char *name;
+  char sql[BUF_SIZE];
+  int ret;
+  name = command_get_token(&task->args);
+  if (name == NULL) {
+    write(task->fd, STRING("response error invalid arguments"));
+    return;
+  }
+
+  snprintf(sql, sizeof(sql), "INSERT INTO weixin_group (uid, name)"
+           " VALUES (%ld, %s);", atol(task->uid), name);
+  ret = mysql_query(weixind->db, sql);
+  if (ret == 0) {
+    write(task->fd, STRING("response ok"));
+  } else {
+    write(task->fd, STRING("response error database"));
+  }
 }
 
 void command_gdel_handler    (weixind_t *weixind, task_t *task)
 {
-  
+  char *gid;
+  char sql[BUF_SIZE];
+  int ret;
+  gid = command_get_token(&task->args);
+  if (gid == NULL) {
+    write(task->fd, STRING("response error invalid arguments"));
+    return;
+  }
+
+  snprintf(sql, sizeof(sql), "SELECT uid FROM weixin_group"
+           " WHERE gid = %ld;", atol(gid));
+  ret = mysql_query(weixind->db, sql);
+  if (ret == 0) {
+    MYSQL_RES *res = mysql_store_result(weixind->db);
+    MYSQL_ROW row = mysql_fetch_row(res);
+    if (!row || strcmp(task->uid, row[0]) != 0) {
+      write(task->fd, STRING("response error you are not the group owner"));
+      return;
+    }
+    mysql_free_result(res);
+  }
+  snprintf(sql, sizeof(sql), "DELETE FROM weixin_group"
+           " WHERE gid = %ld;", atol(gid));
 }
 
 void command_ginv_handler    (weixind_t *weixind, task_t *task)
